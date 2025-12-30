@@ -1,22 +1,13 @@
 const express = require('express');
+const { createServer } = require('node:http');
+
 const app = express();
-const http =  require ('http');
-const path = require('path');
-const socketio = require('socket.io');
-const server = http.createServer(app);
-const io = socketio(server);
+const server = createServer(app);
 
-app.set('view engine', 'ejs');
-app.set(express.static(path.join(__dirname, 'public')));
-io.on('connection', function(socket){
-  console.log('connected');
-})
-
-
-
-
-app.get('/',function(req, res){
-  res.send('Ataul Mohsin, DevOps Engineer')
+app.get('/', (req, res) => {
+  res.send('<h1>Hello world</h1>');
 });
 
-server.listen(3000);
+server.listen(3000, () => {
+  console.log('server running at http://localhost:3000');
+});
