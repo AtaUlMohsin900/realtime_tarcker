@@ -1,14 +1,21 @@
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-}
-
-h1 {
-  color: #333;
-}
-
-#map {
-  border: 2px solid #ccc;
-  border-radius: 8px;
+.instructions {
   margin-top: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  border-left: 4px solid #2196F3;
+}
+
+.instructions h3 {
+  margin-top: 0;
+  color: #2196F3;
+}
+
+.instructions ul {
+  margin-bottom: 0;
+}
+
+.custom-marker {
+  background: none !important;
+  border: none !important;
 }

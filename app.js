@@ -5,49 +5,80 @@ const path = require("path");
 const { Server } = require("socket.io");
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Store connected users
+const users = new Map();
 
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
 
-io.on("connection", function(socket){
-  console.log("New user connected with id:", socket.id);
+io.on("connection", (socket) => {
+  console.log(`User connected: ${socket.id}`);
+  users.set(socket.id, { id: socket.id });
   
   // Send welcome message
-  socket.emit("message", "Welcome to Real Time Tracking!");
+  socket.emit("message", `Welcome! Your ID: ${socket.id}`);
   
-  // Send initial location
-  socket.emit("locationUpdate", { 
-    lat: 20.5937, 
-    lng: 78.9629,
-    timestamp: new Date().toISOString()
-  });
+  // Broadcast new user to others
+  socket.broadcast.emit("user-connected", socket.id);
   
-  // Handle location requests
-  socket.on("getLocation", () => {
-    console.log("Location requested by:", socket.id);
+  // Handle location updates from client
+  socket.on("send-location", (locationData) => {
+    const { latitude, longitude } = locationData;
     
-    // In real app, get location from database or GPS
-    const testLocation = {
-      lat: 20.5937 + (Math.random() - 0.5) * 0.1,
-      lng: 78.9629 + (Math.random() - 0.5) * 0.1,
-      timestamp: new Date().toISOString()
-    };
+    // Update user data
+    users.set(socket.id, {
+      ...users.get(socket.id),
+      latitude,
+      longitude,
+      lastUpdate: new Date().toISOString()
+    });
     
-    socket.emit("locationUpdate", testLocation);
+    console.log(`Location from ${socket.id}:`, { latitude, longitude });
+    
+    // Broadcast to all other clients
+    socket.broadcast.emit("receive-location", {
+      id: socket.id,
+      latitude,
+      longitude
+    });
   });
   
   // Handle disconnection
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log(`User disconnected: ${socket.id}`);
+    users.delete(socket.id);
+    
+    // Notify other clients to remove marker
+    socket.broadcast.emit("user-disconnected", socket.id);
   });
+  
+  // Send current users to new connection
+  const currentUsers = Array.from(users.entries())
+    .filter(([id, data]) => id !== socket.id && data.latitude && data.longitude)
+    .map(([id, data]) => ({
+      id,
+      latitude: data.latitude,
+      longitude: data.longitude
+    }));
+  
+  if (currentUsers.length > 0) {
+    socket.emit("existing-users", currentUsers);
+  }
 });
 
-app.get("/", function(req, res){
+app.get("/", (req, res) => {
   res.render("index");
 });
 
-server.listen(3000, () => {
-  console.log("Server is running on http://localhost:3000");
-  console.log("Socket.io server is ready");
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Active users: ${users.size}`);
 });

@@ -1,17 +1,32 @@
 // Connect to the server
 const socket = io();
+console.log("hey");
 
-// Log when connected
-socket.on('connect', () => {
-    console.log('Connected to server with id:', socket.id);
-});
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition((position)=>{
+    const {latitude, longitude} = position.coords; 
+    socket.emit("send-location",{latitude, longitude});
+  }, 
+  (error)=>{
+    console.log(error);
+  
+  },  
+  {
+    enableHighAccuracy: true,
+    timeout: 5000,
+    maximumAge:0 
+  }
+);
+}
 
-// Listen for the 'message' event from the server
-socket.on('message', (msg) => {
-    console.log('Message from server:', msg);
-});
+L.map("map").setView([0,0], 10);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  attribution: "Sheryians code School"
+}).addTo(map);
 
-// Log when disconnected
-socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-});
+const markers = {};
+
+socket.on("receive-location", (data)=>{
+  const {id, latitude, longitude} = data;
+  map.setView([latitude, longitude])
+})
